@@ -1,19 +1,9 @@
-## PyPika Intro
+import pypika
+from pypika import Query, Table, Field, AliasedQuery, Order
+from pypika.analytics import Rank
+from pypika.functions import Max
+from utils import get_src_and_sql
 
-All the example code can be found in [src/examples](src/exmples.py) file.
-
-If you wish to run the unittest, run
-
-```
-make test
-```
-
-
-## Examples:
-### example_0_no_quote
-
-with following code:
-```python
 def example_0_no_quote():
     t1 = Table('customers')
     qry = Query.from_(t1).select(
@@ -23,21 +13,7 @@ def example_0_no_quote():
     )
     return qry.get_sql(quote_char='')
 
-```
 
-you will get following SQL:
-```SQL
-SELECT name,
-       email,
-       address
-FROM customers;
-```
-
-
-### example_1_with_quote
-
-with following code:
-```python
 def example_1_with_quote():
     t1 = Table('customers')
     qry = Query.from_(t1).select(
@@ -47,21 +23,19 @@ def example_1_with_quote():
     )
     return qry.get_sql(quote_char='`')
 
-```
 
-you will get following SQL:
-```SQL
-SELECT `name`,
-       `email`,
-       `address`
-FROM `customers`;
-```
+def example_1_without_quote():
+    e = Table('employee')
+    d = Table('department')
+    qry = Query.from_(d).join(e)
+    qry = Query.from_(d).left_join(e).on(d.emp_id==e.emp_id).select(
+        d.dep_name,
+        e.name,
+        e.email,
+        e.address
+    )
+    return qry.get_sql(quote_char='')
 
-
-### example_2_groupby
-
-with following code:
-```python
 def example_2_groupby():
     e = Table('employee')
     d = Table('department')
@@ -73,25 +47,6 @@ def example_2_groupby():
     ).groupby(1, 2).orderby(3, order=Order.desc)
     return qry.get_sql(quote_char='')
 
-```
-
-you will get following SQL:
-```SQL
-SELECT department.name,
-       employee.name,
-       MAX(employee.salary) top_salary
-FROM department
-LEFT JOIN employee ON department.emp_id=employee.emp_id
-GROUP BY 1,
-         2
-ORDER BY 3 DESC;
-```
-
-
-### example_3_rank
-
-with following code:
-```python
 def example_3_rank():
     e = Table('employee')
     d = Table('department')
@@ -104,26 +59,6 @@ def example_3_rank():
     ).orderby(1, 4)
     return qry.get_sql(quote_char='')
 
-```
-
-you will get following SQL:
-```SQL
-SELECT department.name,
-       employee.name,
-       employee.salary,
-       RANK() OVER(PARTITION BY department.name
-                   ORDER BY employee.salary DESC) sal_rank
-FROM department
-LEFT JOIN employee ON department.emp_id=employee.emp_id
-ORDER BY 1,
-         4;
-```
-
-
-### example_4_custom_function
-
-with following code:
-```python
 def example_4_custom_function():
     from pypika.functions import Function
 
@@ -136,20 +71,6 @@ def example_4_custom_function():
     qry = Query.from_(t).select(t.usr_id, MyFunction(t.a, t.b))
     return qry.get_sql(quote_char='')
 
-```
-
-you will get following SQL:
-```SQL
-SELECT usr_id,
-       MY_FUN(a, b)
-FROM customer_info;
-```
-
-
-### example_5_schema_and_config_driven
-
-with following code:
-```python
 def example_5_schema_and_config_driven():
     '''
     If I have a list of tables to land from somewhere
@@ -220,37 +141,33 @@ def example_5_schema_and_config_driven():
 
     return qry.get_sql(quote_char='')
 
+
+def process():
+    funs = [
+        example_0_no_quote,
+        example_1_with_quote,
+        example_2_groupby,
+        example_3_rank,
+        example_4_custom_function,
+        example_5_schema_and_config_driven
+    ]
+
+    for f in funs:
+       func_name, src, sql = get_src_and_sql(f)
+       print(f'''### {func_name}
+
+with following code:
+```python
+{src}
 ```
 
 you will get following SQL:
 ```SQL
-WITH v_A AS
-  (SELECT usr_id,
-          a1,
-          a2
-   FROM A
-   WHERE ref_dt='2021-01-01'
-     AND usr_part='123'),
-     v_B AS
-  (SELECT usr_id,
-          b3,
-          b4
-   FROM B),
-     v_C AS
-  (SELECT usr_id,
-          c1,
-          c4
-   FROM C
-   WHERE ref_dt='2021-01-01'
-     AND usr_part='123')
-SELECT v_A.usr_id,
-       v_A.a1,
-       v_A.a2,
-       v_B.b3,
-       v_B.b4
-FROM v_A
-JOIN v_B ON v_A.usr_id=v_B.usr_id
-JOIN v_C ON v_B.usr_id=v_C.usr_id;
+{sql}
 ```
 
+''')
 
+
+if __name__ == '__main__':
+    process()
