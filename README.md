@@ -65,7 +65,6 @@ with following code:
 def example_2_groupby():
     e = Table('employee')
     d = Table('department')
-    qry = Query.from_(d).join(e)
     qry = Query.from_(d).left_join(e).on(d.emp_id==e.emp_id).select(
         d.name,
         e.name,
